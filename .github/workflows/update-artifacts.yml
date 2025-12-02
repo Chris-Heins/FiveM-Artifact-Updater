@@ -1,0 +1,33 @@
+name: Auto Update FiveM Artifacts
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # Runs once per day at midnight UTC
+  workflow_dispatch:      # Allows manual run
+
+jobs:
+  update-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Fetch latest optional FiveM build
+        run: |
+          LATEST=$(curl -s https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/ \
+            | grep -oP '(?<=href=")[0-9]+(?=/")' \
+            | sort -nr | head -1)
+          
+          echo "Latest build = $LATEST"
+
+          # Build the JSON output
+          echo "{ \"latest_optional\": $LATEST, \"latest_recommended\": 17000 }" > latest.json
+
+      - name: Commit changes
+        run: |
+          git config user.email "update-bot@github.com"
+          git config user.name "FiveM Update Bot"
+
+          git add latest.json
+          git commit -m "Auto-update to build $LATEST" || echo "No changes"
+          git push
